@@ -1,0 +1,7 @@
+#!/bin/sh
+
+go mod tidy && \
+make format && \
+make lint && \
+go vet -vettool=$(which bin/recvnil) ./... && \
+make test
