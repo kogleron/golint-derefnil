@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/kogleron/recvnil/pkg/analyzer"
+	"github.com/kogleron/golint-recvnil/pkg/analyzer"
 	"golang.org/x/tools/go/analysis/singlechecker"
 )
 

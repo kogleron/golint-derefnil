@@ -1,4 +1,4 @@
-module github.com/kogleron/recvnil
+module github.com/kogleron/golint-recvnil
 
 go 1.17
 
