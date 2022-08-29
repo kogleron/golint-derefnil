@@ -7,3 +7,8 @@ type receiver struct {
 	TypeName string
 	FuncDecl *ast.FuncDecl
 }
+
+type dereference struct {
+	Name         string
+	SelectorExpr *ast.SelectorExpr
+}

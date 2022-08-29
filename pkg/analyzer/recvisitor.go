@@ -4,14 +4,14 @@ import "go/ast"
 
 type RecvVisitor struct {
 	recv          *receiver
-	derefNames    []string
+	derefs        []dereference
 	hasIfNilCheck bool
 }
 
 func NewRecvVisitor(recv *receiver) *RecvVisitor {
 	return &RecvVisitor{
-		recv:       recv,
-		derefNames: []string{},
+		recv:   recv,
+		derefs: []dereference{},
 	}
 }
 
@@ -76,17 +76,22 @@ func (v *RecvVisitor) processDeref(selectorExpr *ast.SelectorExpr) {
 		return
 	}
 
-	if ident.Name == v.recv.Name {
-		v.derefNames = append(v.derefNames, selectorExpr.Sel.Name)
+	if ident.Name != v.recv.Name {
+		return
 	}
+
+	v.derefs = append(v.derefs, dereference{
+		Name:         selectorExpr.Sel.Name,
+		SelectorExpr: selectorExpr,
+	})
 }
 
-func (v *RecvVisitor) GetDerefNames() []string {
+func (v *RecvVisitor) GetDerefs() []dereference {
 	if v == nil {
 		return nil
 	}
 
-	return v.derefNames
+	return v.derefs
 }
 
 func (v *RecvVisitor) FoundNilCheck() bool {

@@ -1,7 +1,7 @@
 package example
 
-func (e *Example) foo() string { // want "no nil check for the receiver 'e' of 'foo' before accessing 'nameMe'"
-	return e.nameMe
+func (e *Example) foo() string {
+	return e.nameMe // want "no nil check for the receiver 'e' of 'foo' before accessing 'nameMe'"
 }
 
 func (e *Example) koo() string {

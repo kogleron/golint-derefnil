@@ -13,3 +13,8 @@ go install github.com/kogleron/golint-recvnil/cmd/recvnil@latest
 ```shell
 go vet -vettool=$(which ./bin/recvnil) ./...
 ```
+
+## TODO
+
+- [x] Show in report the position of a receiver derederencing instead of a method.
+- [ ] Add ignore list.

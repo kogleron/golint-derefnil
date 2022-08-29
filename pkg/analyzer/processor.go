@@ -7,13 +7,13 @@ import (
 )
 
 type processor struct {
-	recvDerefs   map[*receiver][]string
+	recvDerefs   map[*receiver][]dereference
 	structFields map[string]map[string]struct{}
 }
 
 func newProcessor() *processor {
 	return &processor{
-		recvDerefs:   make(map[*receiver][]string),
+		recvDerefs:   make(map[*receiver][]dereference),
 		structFields: make(map[string]map[string]struct{}),
 	}
 }
@@ -37,14 +37,14 @@ func (p *processor) report(pass *analysis.Pass) {
 
 	for recv, derefs := range p.recvDerefs {
 		for _, deref := range derefs {
-			_, isField := p.structFields[recv.TypeName][deref]
+			_, isField := p.structFields[recv.TypeName][deref.Name]
 			if isField {
 				pass.Reportf(
-					recv.FuncDecl.Pos(),
+					deref.SelectorExpr.Pos(),
 					"no nil check for the receiver '%s' of '%s' before accessing '%s'",
 					recv.Name,
 					recv.FuncDecl.Name.Name,
-					deref,
+					deref.Name,
 				)
 			}
 		}
@@ -98,7 +98,7 @@ func (p *processor) collectDerefs(funcDecl *ast.FuncDecl) {
 
 	ast.Walk(recvVisitor, funcDecl.Body)
 
-	derefs := recvVisitor.GetDerefNames()
+	derefs := recvVisitor.GetDerefs()
 
 	if !recvVisitor.FoundNilCheck() && len(derefs) > 0 {
 		p.recvDerefs[recv] = derefs
