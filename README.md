@@ -14,7 +14,13 @@ go install github.com/kogleron/golint-recvnil/cmd/recvnil@latest
 go vet -vettool=$(which ./bin/recvnil) ./...
 ```
 
+If there is the ".recvnil.ignore" file then errors from the file will be ignored.
+
+## Flags
+
+- dump-ignore - Dumps errors into '.recvnil.ignore' file.
+
 ## TODO
 
 - [x] Show in report the position of a receiver derederencing instead of a method.
-- [ ] Add ignore list.
+- [x] Add ignore list.
