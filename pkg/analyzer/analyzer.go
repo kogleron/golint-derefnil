@@ -16,7 +16,14 @@ var Analyzer = &analysis.Analyzer{
 	Doc:   "Checks that there is a check for nil for the dereferenced receiver in a method",
 	Flags: *getFlags(params),
 	Run: func(pass *analysis.Pass) (interface{}, error) {
-		proc, err := newProcessor(params)
+		derefAnalyzers := []DerefAnalyzer{
+			NewRecvDerefAnalyzer(
+				newDerefFinder,
+				newNilcheckFinder,
+			),
+		}
+
+		proc, err := NewProcessor(params, derefAnalyzers)
 		if err != nil {
 			return nil, err
 		}
@@ -31,4 +38,17 @@ func getFlags(params *ProcParams) *flag.FlagSet {
 	flags.BoolVar(&params.DumpIgnore, "dump-ignore", false, "Dumps errors into '.recvnil.ignore' file.")
 
 	return flags
+}
+
+func newDerefFinder(varbl Varbl) DerefFinder {
+	return &derefFinder{
+		varbl:  varbl,
+		derefs: []Dereference{},
+	}
+}
+
+func newNilcheckFinder(varbl Varbl) NilcheckFinder {
+	return &nilcheckFinder{
+		varbl: varbl,
+	}
 }

@@ -22,19 +22,17 @@ type ProcParams struct {
 	DumpIgnoreLock *sync.Mutex
 }
 
-type processor struct {
-	recvDerefs   map[*receiver][]dereference
-	structFields map[string]map[string]struct{}
-	ignoreLines  map[string]struct{}
-	params       *ProcParams
+type Processor struct {
+	params      *ProcParams
+	analyzers   []DerefAnalyzer
+	ignoreLines map[string]struct{}
 }
 
-func newProcessor(params *ProcParams) (*processor, error) {
-	p := &processor{
-		recvDerefs:   make(map[*receiver][]dereference),
-		structFields: make(map[string]map[string]struct{}),
-		ignoreLines:  map[string]struct{}{},
-		params:       params,
+func NewProcessor(params *ProcParams, analyzers []DerefAnalyzer) (*Processor, error) {
+	p := &Processor{
+		ignoreLines: map[string]struct{}{},
+		params:      params,
+		analyzers:   analyzers,
 	}
 
 	err := p.loadIgnore()
@@ -45,7 +43,7 @@ func newProcessor(params *ProcParams) (*processor, error) {
 	return p, nil
 }
 
-func (p *processor) loadIgnore() error {
+func (p *Processor) loadIgnore() error {
 	if p == nil {
 		return nil
 	}
@@ -79,17 +77,25 @@ func (p *processor) loadIgnore() error {
 	return nil
 }
 
-func (p *processor) Run(pass *analysis.Pass) (interface{}, error) {
-	inspect := p.getInspect(pass)
+func (p *Processor) Run(pass *analysis.Pass) (interface{}, error) {
+	if p == nil {
+		return nil, nil
+	}
+
+	visitor := NewChainVisitor()
+
+	for j := range p.analyzers {
+		visitor.AddVisitor(p.analyzers[j])
+	}
 
 	for _, f := range pass.Files {
-		ast.Inspect(f, inspect)
+		ast.Walk(visitor, f)
 	}
 
 	return nil, p.report(pass)
 }
 
-func (p *processor) report(pass *analysis.Pass) error {
+func (p *Processor) report(pass *analysis.Pass) error {
 	if p == nil {
 		return nil
 	}
@@ -101,7 +107,7 @@ func (p *processor) report(pass *analysis.Pass) error {
 	return p.reportPass(pass)
 }
 
-func (p *processor) dumpIgnore(pass *analysis.Pass) error {
+func (p *Processor) dumpIgnore(pass *analysis.Pass) error {
 	if p == nil {
 		return nil
 	}
@@ -135,23 +141,27 @@ func (p *processor) dumpIgnore(pass *analysis.Pass) error {
 	w := bufio.NewWriter(f)
 	defer w.Flush()
 
-	for recv, derefs := range p.recvDerefs {
-		for _, deref := range derefs {
-			_, isField := p.structFields[recv.TypeName][deref.Name]
-			if !isField {
-				continue
-			}
-			_, err = w.WriteString(p.buildIgnoreLine(wd, pass, deref.SelectorExpr.Pos()) + "\n")
-			if err != nil {
-				return err
-			}
+	for j := range p.analyzers {
+		var errItrt error
+		err = p.analyzers[j].IterateDerefs(func(deref *Dereference) bool {
+			line := p.buildIgnoreLine(wd, pass, deref.SelectorExpr.Pos())
+			_, errItrt = w.WriteString(line + "\n")
+
+			return errItrt == nil
+		})
+
+		if errItrt != nil {
+			return errItrt
+		}
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (p *processor) buildIgnoreLine(wd string, pass *analysis.Pass, pos token.Pos) string {
+func (p *Processor) buildIgnoreLine(wd string, pass *analysis.Pass, pos token.Pos) string {
 	file := pass.Fset.File(pos)
 	return fmt.Sprintf(
 		"%s %d",
@@ -160,7 +170,7 @@ func (p *processor) buildIgnoreLine(wd string, pass *analysis.Pass, pos token.Po
 	)
 }
 
-func (p *processor) reportPass(pass *analysis.Pass) error {
+func (p *Processor) reportPass(pass *analysis.Pass) error {
 	if p == nil {
 		return nil
 	}
@@ -170,118 +180,32 @@ func (p *processor) reportPass(pass *analysis.Pass) error {
 		return err
 	}
 
-	for recv, derefs := range p.recvDerefs {
-		for _, deref := range derefs {
-			_, isField := p.structFields[recv.TypeName][deref.Name]
-			if !isField {
-				continue
+	for j := range p.analyzers {
+		var errItrt error
+		err = p.analyzers[j].IterateDerefs(func(deref *Dereference) bool {
+			if p.ignoreDeref(wd, pass, deref) {
+				return true
 			}
 
-			ignoreLine := p.buildIgnoreLine(wd, pass, deref.SelectorExpr.Pos())
-			_, ignored := p.ignoreLines[ignoreLine]
-			if ignored {
-				continue
-			}
+			errItrt = p.analyzers[j].ReportDeref(pass, deref)
+			return errItrt == nil
+		})
 
-			pass.Reportf(
-				deref.SelectorExpr.Pos(),
-				"no nil check for the receiver '%s' of '%s' before accessing '%s'",
-				recv.Name,
-				recv.FuncDecl.Name.Name,
-				deref.Name,
-			)
+		if err != nil {
+			return err
 		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (p *processor) getInspect(pass *analysis.Pass) func(node ast.Node) bool {
-	return func(node ast.Node) bool {
-		switch t := node.(type) {
-		case *ast.FuncDecl:
-			p.collectDerefs(t)
-		case *ast.TypeSpec:
-			p.collectStructFields(t)
-		}
-		return true
-	}
-}
+func (p Processor) ignoreDeref(wd string, pass *analysis.Pass, deref *Dereference) bool {
+	ignoreLine := p.buildIgnoreLine(wd, pass, deref.SelectorExpr.Pos())
+	_, ignored := p.ignoreLines[ignoreLine]
 
-func (p *processor) collectStructFields(typeSpec *ast.TypeSpec) {
-	if p == nil {
-		return
-	}
-
-	tp, ok := typeSpec.Type.(*ast.StructType)
-	if !ok {
-		return
-	}
-	structName := typeSpec.Name.Name
-	if p.structFields[structName] == nil {
-		p.structFields[structName] = make(map[string]struct{})
-	}
-
-	for _, field := range tp.Fields.List {
-		for _, fdName := range field.Names {
-			p.structFields[structName][fdName.Name] = struct{}{}
-		}
-	}
-}
-
-func (p *processor) collectDerefs(funcDecl *ast.FuncDecl) {
-	if p == nil {
-		return
-	}
-
-	recv, ok := p.hasLinkReceiver(funcDecl)
-	if !ok {
-		return
-	}
-
-	recvVisitor := NewRecvVisitor(recv)
-
-	ast.Walk(recvVisitor, funcDecl.Body)
-
-	derefs := recvVisitor.GetDerefs()
-
-	if !recvVisitor.FoundNilCheck() && len(derefs) > 0 {
-		p.recvDerefs[recv] = derefs
-	}
-}
-
-func (p *processor) hasLinkReceiver(funcDecl *ast.FuncDecl) (*receiver, bool) {
-	if funcDecl.Recv == nil {
-		return nil, false
-	}
-
-	for _, field := range funcDecl.Recv.List {
-		starExpr, ok := field.Type.(*ast.StarExpr)
-		if !ok {
-			return nil, false
-		}
-
-		ident, ok := starExpr.X.(*ast.Ident)
-		if !ok {
-			return nil, false
-		}
-
-		for _, name := range field.Names {
-			if name.Name == "" {
-				return nil, false
-			}
-
-			recv := &receiver{
-				Name:     name.Name,
-				TypeName: ident.Name,
-				FuncDecl: funcDecl,
-			}
-
-			return recv, true //nolint
-		}
-
-		break //nolint
-	}
-
-	return nil, false
+	return ignored
 }

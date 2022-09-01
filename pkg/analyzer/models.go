@@ -2,13 +2,8 @@ package analyzer
 
 import "go/ast"
 
-type receiver struct {
-	Name     string
-	TypeName string
-	FuncDecl *ast.FuncDecl
-}
-
-type dereference struct {
+type Dereference struct {
+	varbl        Varbl
 	Name         string
 	SelectorExpr *ast.SelectorExpr
 }

@@ -1,4 +1,4 @@
-package example
+package examples
 
 func (e *Example) foo() string {
 	return e.nameMe // want "no nil check for the receiver 'e' of 'foo' before accessing 'nameMe'"
