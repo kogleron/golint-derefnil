@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/kogleron/golint-derefnil/v2/pkg/analyzer"
+	"github.com/kogleron/golint-derefnil/pkg/analyzer"
 	"golang.org/x/tools/go/analysis/singlechecker"
 )
 

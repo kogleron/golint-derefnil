@@ -1,4 +1,4 @@
-module github.com/kogleron/golint-derefnil/v2
+module github.com/kogleron/golint-derefnil
 
 go 1.17
 
