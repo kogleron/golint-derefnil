@@ -34,7 +34,7 @@ install-githooks: ## installs all git hooks
 
 .PHONY: build
 build: ## builds all commands
-	$(GO) $(GOFLAG) build -o $(LOCAL_BIN)/recvnil ./cmd/recvnil
+	$(GO) $(GOFLAG) build -o $(LOCAL_BIN)/golint-derefnil ./cmd/golint-derefnil
 
 .PHONY: test
 test: ## runs tests
