@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/token"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -167,9 +168,11 @@ func (p *Processor) dumpIgnore(pass *analysis.Pass) error {
 
 func (p *Processor) buildIgnoreLine(pass *analysis.Pass, pos token.Pos) string {
 	file := pass.Fset.File(pos)
+	r := regexp.MustCompile("^.*?([^/]+)$")
 	return fmt.Sprintf(
-		"%s %d",
+		"%s/%s %d",
 		pass.Pkg.Path(),
+		r.ReplaceAllString(file.Name(), "$1"),
 		file.Position(pos).Line,
 	)
 }
