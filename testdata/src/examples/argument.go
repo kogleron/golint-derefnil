@@ -1,5 +1,10 @@
 package examples
 
+import (
+	"fmt"
+	"os"
+)
+
 type argStr struct {
 	Vrbl int
 }
@@ -10,6 +15,10 @@ func (a *argStr) getVrbl(def int) int {
 	}
 
 	return a.Vrbl
+}
+
+func (a *argStr) expected(def *os.LinkError) {
+	fmt.Println(def.Op) // want "no nil check for the arg 'def' of 'expected' before dereferencing"
 }
 
 func fooExpectedPropDeref(a *argStr) int {

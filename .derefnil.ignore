@@ -1,2 +1,16 @@
 github.com/kogleron/golint-derefnil/pkg/analyzer/analyzer.go 44
 github.com/kogleron/golint-derefnil/pkg/analyzer/analyzer.go 45
+github.com/kogleron/golint-derefnil/pkg/analyzer/arg_derefanalyzer.go 97
+github.com/kogleron/golint-derefnil/pkg/analyzer/arg_derefanalyzer.go 121
+github.com/kogleron/golint-derefnil/pkg/analyzer/arg_derefanalyzer.go 127
+github.com/kogleron/golint-derefnil/pkg/analyzer/deref_finder.go 37
+github.com/kogleron/golint-derefnil/pkg/analyzer/deref_finder.go 54
+github.com/kogleron/golint-derefnil/pkg/analyzer/deref_finder.go 65
+github.com/kogleron/golint-derefnil/pkg/analyzer/processor.go 91
+github.com/kogleron/golint-derefnil/pkg/analyzer/processor.go 170
+github.com/kogleron/golint-derefnil/pkg/analyzer/processor.go 174
+github.com/kogleron/golint-derefnil/pkg/analyzer/recv_derefanalyzer.go 86
+github.com/kogleron/golint-derefnil/pkg/analyzer/recv_derefanalyzer.go 101
+github.com/kogleron/golint-derefnil/pkg/analyzer/recv_derefanalyzer.go 105
+github.com/kogleron/golint-derefnil/pkg/analyzer/recv_derefanalyzer.go 161
+github.com/kogleron/golint-derefnil/pkg/analyzer/recv_derefanalyzer.go 165

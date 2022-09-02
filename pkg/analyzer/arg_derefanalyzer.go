@@ -141,12 +141,7 @@ func (a *ArgDerefAnalyzer) getArg(funcDecl *ast.FuncDecl, field *ast.Field) *Arg
 		return nil
 	}
 
-	starExpr, ok := field.Type.(*ast.StarExpr)
-	if !ok {
-		return nil
-	}
-
-	ident, ok := starExpr.X.(*ast.Ident)
+	_, ok := field.Type.(*ast.StarExpr)
 	if !ok {
 		return nil
 	}
@@ -155,7 +150,6 @@ func (a *ArgDerefAnalyzer) getArg(funcDecl *ast.FuncDecl, field *ast.Field) *Arg
 		if name.Name != "" {
 			return &Argument{
 				Name:     name.Name,
-				TypeName: ident.Name,
 				FuncDecl: funcDecl,
 			}
 		}
