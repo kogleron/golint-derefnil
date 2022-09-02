@@ -45,7 +45,7 @@ func (a *RecvDerefAnalyzer) IterateDerefs(v DerefReportVisitor) error {
 
 	for j := range a.derefs {
 		deref := &a.derefs[j]
-		recv, ok := deref.varbl.(*receiver)
+		recv, ok := deref.varbl.(*Receiver)
 		if !ok {
 			return errors.New("expected *receiver")
 		}
@@ -97,7 +97,7 @@ func (a *RecvDerefAnalyzer) collectDerefs(funcDecl *ast.FuncDecl) {
 	a.derefs = append(a.derefs, derefs...)
 }
 
-func (a *RecvDerefAnalyzer) getRefReceiver(funcDecl *ast.FuncDecl) *receiver {
+func (a *RecvDerefAnalyzer) getRefReceiver(funcDecl *ast.FuncDecl) *Receiver {
 	if funcDecl.Recv == nil {
 		return nil
 	}
@@ -115,7 +115,7 @@ func (a *RecvDerefAnalyzer) getRefReceiver(funcDecl *ast.FuncDecl) *receiver {
 
 		for _, name := range field.Names {
 			if name.Name != "" {
-				return &receiver{
+				return &Receiver{
 					Name:     name.Name,
 					TypeName: ident.Name,
 					FuncDecl: funcDecl,
@@ -130,7 +130,11 @@ func (a *RecvDerefAnalyzer) getRefReceiver(funcDecl *ast.FuncDecl) *receiver {
 }
 
 func (a *RecvDerefAnalyzer) ReportDeref(pass *analysis.Pass, deref *Dereference) error {
-	recv, ok := deref.varbl.(*receiver)
+	if deref == nil {
+		return nil
+	}
+
+	recv, ok := deref.varbl.(*Receiver)
 	if !ok {
 		return errors.New("expected *receiver")
 	}
@@ -139,7 +143,7 @@ func (a *RecvDerefAnalyzer) ReportDeref(pass *analysis.Pass, deref *Dereference)
 	}
 
 	pass.Reportf(
-		deref.SelectorExpr.Pos(),
+		deref.Expr.Pos(),
 		"no nil check for the receiver '%s' of '%s' before accessing '%s'",
 		recv.Name,
 		recv.FuncDecl.Name.Name,

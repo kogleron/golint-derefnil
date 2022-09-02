@@ -19,17 +19,34 @@ func (f *derefFinder) Visit(node ast.Node) (w ast.Visitor) {
 		return nil
 	}
 
-	selectorExpr, ok := node.(*ast.SelectorExpr)
-	if !ok {
-		return f
+	switch tn := node.(type) {
+	case *ast.SelectorExpr:
+		f.processDotDeref(tn)
+	case *ast.StarExpr:
+		f.processVarDeref(tn)
 	}
-
-	f.processDeref(selectorExpr)
 
 	return f
 }
 
-func (f *derefFinder) processDeref(selectorExpr *ast.SelectorExpr) {
+func (f *derefFinder) processVarDeref(starExpr *ast.StarExpr) {
+	if f == nil {
+		return
+	}
+
+	ident, ok := starExpr.X.(*ast.Ident)
+	if !ok || ident.Name != f.varbl.GetName() {
+		return
+	}
+
+	f.derefs = append(f.derefs, Dereference{
+		varbl: f.varbl,
+		Name:  f.varbl.GetName(),
+		Expr:  starExpr,
+	})
+}
+
+func (f *derefFinder) processDotDeref(selectorExpr *ast.SelectorExpr) {
 	if f == nil {
 		return
 	}
@@ -44,9 +61,9 @@ func (f *derefFinder) processDeref(selectorExpr *ast.SelectorExpr) {
 	}
 
 	f.derefs = append(f.derefs, Dereference{
-		varbl:        f.varbl,
-		Name:         selectorExpr.Sel.Name,
-		SelectorExpr: selectorExpr,
+		varbl: f.varbl,
+		Name:  selectorExpr.Sel.Name,
+		Expr:  selectorExpr,
 	})
 }
 

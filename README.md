@@ -24,3 +24,4 @@ If there is the ".recvnil.ignore" file then errors from the file will be ignored
 
 - [x] Show in report the position of a receiver derederencing instead of a method.
 - [x] Add ignore list.
+- [x] Report about dereferencing function arguments

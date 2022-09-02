@@ -2,6 +2,7 @@ package analyzer
 
 import (
 	"flag"
+	"go/ast"
 	"sync"
 
 	"golang.org/x/tools/go/analysis"
@@ -21,6 +22,11 @@ var Analyzer = &analysis.Analyzer{
 				newDerefFinder,
 				newNilcheckFinder,
 			),
+			NewArgDerefAnalyzer(
+				newDerefFinder,
+				newNilcheckFinder,
+				newCallSelectorFinder,
+			),
 		}
 
 		proc, err := NewProcessor(params, derefAnalyzers)
@@ -33,6 +39,10 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func getFlags(params *ProcParams) *flag.FlagSet {
+	if params == nil {
+		return nil
+	}
+
 	var flags *flag.FlagSet = flag.NewFlagSet("recvnil", flag.ExitOnError)
 
 	flags.BoolVar(&params.DumpIgnore, "dump-ignore", false, "Dumps errors into '.recvnil.ignore' file.")
@@ -50,5 +60,11 @@ func newDerefFinder(varbl Varbl) DerefFinder {
 func newNilcheckFinder(varbl Varbl) NilcheckFinder {
 	return &nilcheckFinder{
 		varbl: varbl,
+	}
+}
+
+func newCallSelectorFinder() CallSelectorFinder {
+	return &callSelectorFinder{
+		exprs: map[ast.Expr]struct{}{},
 	}
 }

@@ -2,12 +2,12 @@ package analyzer
 
 import "go/ast"
 
-type Receiver struct {
+type Argument struct {
 	Name     string
 	TypeName string
 	FuncDecl *ast.FuncDecl
 }
 
-func (r Receiver) GetName() string {
-	return r.Name
+func (a Argument) GetName() string {
+	return a.Name
 }

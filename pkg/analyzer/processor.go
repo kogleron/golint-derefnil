@@ -144,7 +144,7 @@ func (p *Processor) dumpIgnore(pass *analysis.Pass) error {
 	for j := range p.analyzers {
 		var errItrt error
 		err = p.analyzers[j].IterateDerefs(func(deref *Dereference) bool {
-			line := p.buildIgnoreLine(wd, pass, deref.SelectorExpr.Pos())
+			line := p.buildIgnoreLine(wd, pass, deref.Expr.Pos())
 			_, errItrt = w.WriteString(line + "\n")
 
 			return errItrt == nil
@@ -204,7 +204,11 @@ func (p *Processor) reportPass(pass *analysis.Pass) error {
 }
 
 func (p Processor) ignoreDeref(wd string, pass *analysis.Pass, deref *Dereference) bool {
-	ignoreLine := p.buildIgnoreLine(wd, pass, deref.SelectorExpr.Pos())
+	if deref == nil {
+		return true
+	}
+
+	ignoreLine := p.buildIgnoreLine(wd, pass, deref.Expr.Pos())
 	_, ignored := p.ignoreLines[ignoreLine]
 
 	return ignored
