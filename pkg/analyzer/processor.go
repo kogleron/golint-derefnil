@@ -13,13 +13,12 @@ import (
 	"golang.org/x/tools/go/analysis"
 )
 
-const (
-	FILE_IGNORE = ".recvnil.ignore"
-)
+var dumpedLines map[string]struct{} = map[string]struct{}{}
 
 type ProcParams struct {
 	DumpIgnore     bool
 	DumpIgnoreLock *sync.Mutex
+	DumpIgnoreFile string
 }
 
 type Processor struct {
@@ -48,12 +47,12 @@ func (p *Processor) loadIgnore() error {
 		return nil
 	}
 
-	_, err := os.Open(FILE_IGNORE)
+	_, err := os.Open(p.params.DumpIgnoreFile)
 	if err != nil {
 		return nil
 	}
 
-	f, err := os.OpenFile(FILE_IGNORE, os.O_RDONLY, 0o755)
+	f, err := os.OpenFile(p.params.DumpIgnoreFile, os.O_RDONLY, 0o755)
 	if err != nil {
 		return err
 	}
@@ -119,20 +118,15 @@ func (p *Processor) dumpIgnore(pass *analysis.Pass) error {
 	p.params.DumpIgnoreLock.Lock()
 	defer p.params.DumpIgnoreLock.Unlock()
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	var openFlags int
-	_, noexists := os.Open(FILE_IGNORE)
+	_, noexists := os.Open(p.params.DumpIgnoreFile)
 	if noexists != nil {
 		openFlags = os.O_WRONLY | os.O_CREATE
 	} else {
 		openFlags = os.O_WRONLY | os.O_APPEND
 	}
 
-	f, err := os.OpenFile(FILE_IGNORE, openFlags, 0o755)
+	f, err := os.OpenFile(p.params.DumpIgnoreFile, openFlags, 0o755)
 	if err != nil {
 		return err
 	}
@@ -144,10 +138,20 @@ func (p *Processor) dumpIgnore(pass *analysis.Pass) error {
 	for j := range p.analyzers {
 		var errItrt error
 		err = p.analyzers[j].IterateDerefs(func(deref *Dereference) bool {
-			line := p.buildIgnoreLine(wd, pass, deref.Expr.Pos())
-			_, errItrt = w.WriteString(line + "\n")
+			line := p.buildIgnoreLine(pass, deref.Expr.Pos())
 
-			return errItrt == nil
+			if _, dumped := dumpedLines[line]; dumped {
+				return true
+			}
+
+			_, errItrt = w.WriteString(line + "\n")
+			if errItrt != nil {
+				return false
+			}
+
+			dumpedLines[line] = struct{}{}
+
+			return true
 		})
 
 		if errItrt != nil {
@@ -161,11 +165,11 @@ func (p *Processor) dumpIgnore(pass *analysis.Pass) error {
 	return nil
 }
 
-func (p *Processor) buildIgnoreLine(wd string, pass *analysis.Pass, pos token.Pos) string {
+func (p *Processor) buildIgnoreLine(pass *analysis.Pass, pos token.Pos) string {
 	file := pass.Fset.File(pos)
 	return fmt.Sprintf(
 		"%s %d",
-		strings.Replace(file.Name(), wd+"/", "", 1),
+		pass.Pkg.Path(),
 		file.Position(pos).Line,
 	)
 }
@@ -208,7 +212,7 @@ func (p Processor) ignoreDeref(wd string, pass *analysis.Pass, deref *Dereferenc
 		return true
 	}
 
-	ignoreLine := p.buildIgnoreLine(wd, pass, deref.Expr.Pos())
+	ignoreLine := p.buildIgnoreLine(pass, deref.Expr.Pos())
 	_, ignored := p.ignoreLines[ignoreLine]
 
 	return ignored

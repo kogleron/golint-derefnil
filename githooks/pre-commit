@@ -3,5 +3,5 @@
 go mod tidy && \
 make format && \
 make lint && \
-go vet -vettool=$(which bin/golint-derefnil) ./... && \
+go vet -vettool=$(which bin/golint-derefnil) -ignore-file="$PWD/.derefnil.ignore" ./... && \
 make test

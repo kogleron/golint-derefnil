@@ -39,13 +39,10 @@ var Analyzer = &analysis.Analyzer{
 }
 
 func getFlags(params *ProcParams) *flag.FlagSet {
-	if params == nil {
-		return nil
-	}
+	var flags *flag.FlagSet = flag.NewFlagSet("golint-derefnil", flag.ExitOnError)
 
-	var flags *flag.FlagSet = flag.NewFlagSet("recvnil", flag.ExitOnError)
-
-	flags.BoolVar(&params.DumpIgnore, "dump-ignore", false, "Dumps errors into '.recvnil.ignore' file.")
+	flags.BoolVar(&params.DumpIgnore, "dump-ignore", false, "Dumps errors into the given file.")
+	flags.StringVar(&params.DumpIgnoreFile, "ignore-file", "./.derefnil.ignore", "Path to the file with ingored lines")
 
 	return flags
 }
